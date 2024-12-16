@@ -1,6 +1,7 @@
 !pip install -U kogi-canvas
 
 from kogi_canvas import Canvas
+from kogi_canvas import play_othello
 import math
 import random
 
@@ -67,22 +68,25 @@ def random_place(board, stone):
         y = random.randint(0, len(board) - 1)
         if can_place_x_y(board, stone, x, y):
             return x, y
-            
+
 class nekoAI(object):
-
-    WEIGHT_MATRIX = [
-    [100, -20, 10, 10, -20, 100],
-    [-20, -50,  1,  1, -50, -20],
-    [10,   1,   5,  5,   1,  10],
-    [10,   1,   5,  5,   1,  10],
-    [-20, -50,  1,  1, -50, -20],
-    [100, -20, 10, 10, -20, 100],
-    ]
-
     def face(self):
         return "🐱"
 
+    # 6×6用の重み付け行列
+    WEIGHT_MATRIX = [
+        [100, -50, 10, 10, -50, 100],
+        [-50, -50, 1, 1, -50, -50],
+        [10, 1, 5, 5, 1, 10],
+        [10, 1, 5, 5, 1, 10],
+        [-50, -50, 1, 1, -50, -50],
+        [100, -50, 10, 10, -50, 100]
+    ]
+
     def count_flips(self, board, stone, x, y):
+        """
+        石を置いたときに裏返せる石の数をカウントする関数。
+        """
         if board[y][x] != 0:
             return 0
 
@@ -103,23 +107,31 @@ class nekoAI(object):
         return total_flips
 
     def evaluate_moves(self, board, stone):
+        """
+        すべての有効な手を評価し、スコア付きでリストを返す。
+        """
         moves = []
         for y in range(len(board)):
             for x in range(len(board[0])):
-                if can_place_x_y(board, stone, x, y):
+                if board[y][x] == 0:  # 空きマス
                     flips = self.count_flips(board, stone, x, y)
-                    weight = WEIGHT_MATRIX[y][x]  # マスの重み
-                    score = flips + weight
-                    moves.append((score, x, y))
+                    if flips > 0:  # 裏返せる石がある手のみ評価
+                        weight = self.WEIGHT_MATRIX[y][x]  # 重みを取得
+                        score = flips + weight  # 石を裏返す数 + 重み
+                        moves.append((score, x, y))
         return moves
 
     def place(self, board, stone):
         moves = self.evaluate_moves(board, stone)
         if moves:
+            # スコアが最も高い手を選択
             moves.sort(reverse=True)
             _, x, y = moves[0]
             return x, y
         else:
+            # ランダム配置（置ける場所がない場合の保険）
             return random_place(board, stone)
 
+# AIと対戦するゲーム
 play_othello(nekoAI())
+
